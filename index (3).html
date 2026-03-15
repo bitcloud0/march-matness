@@ -1,0 +1,986 @@
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>March Matness 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #ffffff; --bg2: #f7f6f3; --bg3: #f0efe9;
+    --text: #1a1a18; --text2: #6b6b67; --text3: #9a9a95;
+    --border: rgba(0,0,0,0.10); --border2: rgba(0,0,0,0.18);
+    --blue: #185FA5; --blue-bg: #E6F1FB; --blue-light: #B5D4F4;
+    --green: #3B6D11; --green-bg: #EAF3DE; --green-light: #C0DD97;
+    --amber: #854F0B; --amber-bg: #FAEEDA; --amber-light: #FAC775;
+    --pink: #993556; --pink-bg: #FBEAF0; --pink-light: #F4C0D1;
+    --gray-bg: #F1EFE8; --gray-text: #5F5E5A; --gray-light: #D3D1C7;
+    --red: #A32D2D; --red-bg: #FCEBEB; --red-border: #F7C1C1;
+    --gold: #8B6914; --radius: 8px; --radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a; --bg2: #252523; --bg3: #2e2e2b;
+      --text: #f0efe9; --text2: #9a9a95; --text3: #6b6b67;
+      --border: rgba(255,255,255,0.10); --border2: rgba(255,255,255,0.18);
+      --blue-bg: #0c3560; --blue-light: #1a5a9a;
+      --green-bg: #1a3a06; --green-light: #2d5c0f;
+      --amber-bg: #3d2400; --amber-light: #6b3d06;
+      --pink-bg: #3d0f1f; --pink-light: #6b1f35;
+      --gray-bg: #2e2e2b; --gray-light: #444441;
+      --red-bg: #3d0f0f; --red-border: #6b1f1f;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; }
+  .app { max-width: 1100px; margin: 0 auto; padding: 1rem; }
+  .header { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+  .header-title { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
+  .header-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .db-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+  .db-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; }
+  .db-dot.connected { background: #5cb85c; }
+  .db-dot.error { background: #d9534f; }
+  .tabs { display: flex; gap: 3px; background: var(--bg2); border-radius: var(--radius); padding: 3px; border: 1px solid var(--border); }
+  .tab { padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; background: transparent; color: var(--text2); font-family: inherit; transition: all .15s; }
+  .tab.active { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  .section { display: none; } .section.active { display: block; }
+  .card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1rem; }
+  .metric-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 1rem; }
+  .metric { background: var(--bg2); border-radius: var(--radius); padding: .875rem; border: 1px solid var(--border); }
+  .metric-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
+  .metric-val { font-size: 20px; font-weight: 600; }
+  .metric-val.gold { color: var(--gold); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-weight: 500; font-size: 11px; color: var(--text2); padding: 6px 8px; border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: .04em; }
+  td { padding: 8px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg2); }
+  .rank-badge { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; font-size: 12px; font-weight: 600; background: var(--bg2); color: var(--text2); border: 1px solid var(--border); }
+  .rank-badge.r1 { background: #FFD700; color: #6B5000; border-color: #d4af00; }
+  .rank-badge.r2 { background: #C0C0C0; color: #3a3a3a; border-color: #aaa; }
+  .rank-badge.r3 { background: #CD7F32; color: #3a1a00; border-color: #a86520; }
+  .seed-chip { display: inline-block; padding: 1px 7px; border-radius: 99px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .seed-chip.s12 { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-light); }
+  .seed-chip.s34 { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-light); }
+  .seed-chip.s56 { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-light); }
+  .seed-chip.s78 { background: var(--pink-bg); color: var(--pink); border: 1px solid var(--pink-light); }
+  .seed-chip.s9up { background: var(--gray-bg); color: var(--gray-text); border: 1px solid var(--gray-light); }
+  input[type=text], select { width: 100%; padding: 7px 10px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; font-family: inherit; outline: none; }
+  input[type=text]:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-bg); }
+  .btn { padding: 7px 16px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; transition: all .15s; }
+  .btn:hover { background: var(--bg2); }
+  .btn:active { transform: scale(.98); }
+  .btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .btn.primary:hover { opacity: .85; }
+  .btn.danger { color: var(--red); border-color: var(--red-border); }
+  .btn.danger:hover { background: var(--red-bg); }
+  .btn.sm { padding: 4px 10px; font-size: 12px; }
+  .btn.sync { background: var(--blue); color: #fff; border-color: var(--blue); display: flex; align-items: center; gap: 6px; }
+  .btn.sync:hover { opacity: .88; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label { font-size: 11px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .alert { padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 10px; }
+  .alert.error { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+  .alert.success { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-light); }
+  .alert.info { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-light); }
+  .alert.warn { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-light); }
+  .section-title { font-size: 15px; font-weight: 600; margin-bottom: .875rem; letter-spacing: -.2px; }
+  .divider { height: 1px; background: var(--border); margin: 1.5rem 0; }
+  .payout-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .payout-row:last-child { border-bottom: none; }
+  .pts-green { color: var(--green); font-weight: 600; }
+  .empty-state { text-align: center; padding: 3rem; color: var(--text2); font-size: 14px; }
+  .empty-icon { font-size: 32px; margin-bottom: .75rem; }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; display: flex; align-items: flex-start; justify-content: center; padding-top: 48px; overflow-y: auto; }
+  .modal { background: var(--bg); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 1.5rem; width: min(700px, 96vw); max-height: 82vh; overflow-y: auto; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+  .modal-title { font-size: 16px; font-weight: 600; }
+  .close-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text2); padding: 0 4px; line-height: 1; }
+  .weight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; }
+  .weight-card { background: var(--bg2); border-radius: var(--radius); padding: 10px 12px; border: 1px solid var(--border); }
+  .weight-label { font-size: 10px; font-weight: 700; color: var(--text2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .06em; }
+  .sci { font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 500; }
+  .sci.ok { background: var(--green-bg); color: var(--green); }
+  .sci.warn { background: var(--red-bg); color: var(--red); }
+  .seed-counter { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .import-drop { border: 2px dashed var(--border2); border-radius: var(--radius-lg); padding: 2rem; text-align: center; cursor: pointer; transition: all .15s; }
+  .import-drop:hover { background: var(--bg2); border-color: var(--blue); }
+  .import-drop input { display: none; }
+  .unmatched-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .unmatched-row:last-child { border-bottom: none; }
+  .sync-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .sync-status { font-size: 12px; color: var(--text2); }
+  .sync-status.live { color: var(--green); }
+  .sync-status.err { color: var(--red); }
+  .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .log-entry { font-size: 12px; padding: 5px 0; border-bottom: 1px solid var(--border); display: flex; gap: 10px; align-items: center; }
+  .log-entry:last-child { border-bottom: none; }
+  .log-time { color: var(--text2); min-width: 65px; }
+  .config-box { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem; }
+  .config-title { font-size: 14px; font-weight: 600; margin-bottom: .5rem; }
+  .config-desc { font-size: 13px; color: var(--text2); margin-bottom: 1rem; line-height: 1.6; }
+  .config-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .step { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 1rem; }
+  .step-num { min-width: 26px; height: 26px; border-radius: 50%; background: var(--blue); color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-body { font-size: 13px; line-height: 1.65; color: var(--text2); }
+  .step-body strong { color: var(--text); }
+  code { background: var(--bg3); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-size: 12px; font-family: 'SF Mono', 'Courier New', monospace; color: var(--text); }
+  .code-block { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; font-size: 12px; font-family: 'SF Mono', 'Courier New', monospace; color: var(--text); white-space: pre-wrap; word-break: break-all; margin: 6px 0; }
+  .setup-required { text-align: center; padding: 2rem 1rem; }
+  .setup-required h2 { font-size: 18px; font-weight: 600; margin-bottom: .5rem; }
+  .setup-required p { font-size: 14px; color: var(--text2); margin-bottom: 1.5rem; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div>
+      <div class="header-title">March Matness 2026</div>
+      <div class="header-sub">NCAA Wrestling Championships — Cleveland, March 19–21</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div class="db-status"><div class="db-dot connected" id="db-dot"></div><span id="db-label">Connected</span></div>
+      <div class="tabs">
+        <button class="tab" onclick="showTab('leaderboard',this)">Leaderboard</button>
+        <button class="tab" onclick="showTab('roster',this)">Rosters</button>
+        <button class="tab" onclick="showTab('results',this)">Results</button>
+        <button class="tab" onclick="showTab('admin',this)">Admin</button>
+        <button class="tab active" onclick="showTab('setup',this)">Setup</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="leaderboard" class="section"><div class="sync-panel">
+    <div>
+      <div style="font-weight:600;font-size:14px;margin-bottom:2px">Live results sync</div>
+      <div id="sync-status" class="sync-status">Database not connected — see Setup tab</div>
+    </div>
+    <button id="sync-btn" class="btn sync" onclick="liveSync()" disabled="">Live sync results</button>
+  </div>
+  <div class="metric-row">
+    <div class="metric"><div class="metric-label">Entries</div><div class="metric-val">0</div></div>
+    <div class="metric"><div class="metric-label">Total collected</div><div class="metric-val">$0</div></div>
+    <div class="metric"><div class="metric-label">Prize pool</div><div class="metric-val">$0</div></div>
+    <div class="metric"><div class="metric-label">Admin fee</div><div class="metric-val">$0</div></div>
+    <div class="metric"><div class="metric-label">1st place</div><div class="metric-val gold">$0</div></div>
+    <div class="metric"><div class="metric-label">Results</div><div class="metric-val">0</div></div>
+  </div><div class="card"><div class="empty-state"><div class="empty-icon">🤼</div><div>No entries yet.</div><div style="font-size:12px;margin-top:.5rem">Import your Excel file in the Admin tab.</div></div></div></div>
+  <div id="roster" class="section"></div>
+  <div id="results" class="section"></div>
+  <div id="admin" class="section"></div>
+  <div id="setup" class="section active"><div class="section-title">Supabase database setup</div>
+  <div class="alert info">This is a one-time setup. Once done, everyone who opens the URL will share the same live data — rosters, results, and leaderboard.</div>
+
+  <div class="card" style="margin-bottom:1rem">
+    <div style="font-weight:600;font-size:14px;margin-bottom:1rem">Step-by-step instructions</div>
+    <div class="step"><div class="step-num">1</div><div class="step-body"><strong>Create a free Supabase account</strong><br>Go to <a href="https://supabase.com" target="_blank" style="color:var(--blue)">supabase.com</a> → click "Start your project" → sign up with GitHub or email. It's free, no credit card needed.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-body"><strong>Create a new project</strong><br>Click "New project" → name it <code>march-matness</code> → pick any region → set a database password (save it somewhere) → click "Create new project". Wait ~1 minute for it to spin up.</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-body"><strong>Create the two database tables</strong><br>In your project, click <strong>SQL Editor</strong> in the left sidebar → click "New query" → paste this entire block and click Run:</div></div>
+    <div class="code-block">create table participants (
+  id uuid default gen_random_uuid() primary key,
+  name text not null,
+  roster jsonb default '{}'::jsonb,
+  created_at timestamptz default now()
+);
+
+create table results (
+  id uuid default gen_random_uuid() primary key,
+  weight int not null,
+  wrestler_name text not null,
+  bracket text not null,
+  round text not null,
+  result_type text not null default 'decision',
+  placement_pts numeric default 0,
+  source text default 'manual',
+  created_at timestamptz default now()
+);
+
+alter table participants enable row level security;
+alter table results enable row level security;
+
+create policy "Public read" on participants for select using (true);
+create policy "Public insert" on participants for insert with check (true);
+create policy "Public update" on participants for update using (true);
+create policy "Public delete" on participants for delete using (true);
+
+create policy "Public read" on results for select using (true);
+create policy "Public insert" on results for insert with check (true);
+create policy "Public delete" on results for delete using (true);</div>
+    <div class="step" style="margin-top:1rem"><div class="step-num">4</div><div class="step-body"><strong>Get your API keys</strong><br>Click <strong>Project Settings</strong> (gear icon) → <strong>API</strong> → copy two things:<br>• <strong>Project URL</strong> — looks like <code>https://abcxyz.supabase.co</code><br>• <strong>anon public</strong> key — a long string starting with <code>eyJ...</code></div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-body"><strong>Paste them below and save</strong></div></div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:600;font-size:14px;margin-bottom:1rem">Enter your Supabase credentials</div>
+    <div class="config-row">
+      <div class="form-group"><label>Project URL</label><input type="text" id="cfg-url" placeholder="https://abcxyz.supabase.co" value="https://gooqaonwetekstfbqjpj.supabase.co"></div>
+      <div class="form-group"><label>Anon public key</label><input type="text" id="cfg-key" placeholder="eyJ..." value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdvb3Fhb253ZXRla3N0ZmJxanBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MzA0ODMsImV4cCI6MjA4OTEwNjQ4M30.KEK3momDvHXW3l-Ih18Ia8RklZe7WTrZmSrOEWOmtuA"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
+      <button class="btn primary" onclick="saveConfig()">Save and connect</button>
+      <button class="btn danger" onclick="clearConfig()">Clear credentials</button>
+    </div>
+    <div id="cfg-result" style="margin-top:10px"></div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-title">Share the app</div>
+  <div class="card">
+    <div style="font-size:13px;color:var(--text2);margin-bottom:1rem">Once you've completed setup above, host the app for free on GitHub Pages so anyone can open it. The credentials are saved in each user's browser automatically once you share the URL.</div>
+    <div class="step"><div class="step-num">1</div><div class="step-body"><strong>Download this HTML file</strong> — use the download button below.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-body"><strong>Open the file in a text editor</strong> (Notepad on Windows, TextEdit on Mac). Find the line near the top that says <code>supabaseUrl: localStorage.getItem('mm_url') || ''</code> and replace the two empty <code>''</code> values with your actual URL and key so they're pre-filled for everyone:<br><br><code>supabaseUrl: 'https://abcxyz.supabase.co'</code><br><code>supabaseKey: 'eyJ...'</code></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-body"><strong>Go to <a href="https://github.com" target="_blank" style="color:var(--blue)">github.com</a></strong> → create a free account → click "+" → New repository → name it <code>march-matness</code> → set it to Public → click "Create repository".</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-body"><strong>Upload the file</strong> → on your new repo page click "uploading an existing file" → drag in your <code>index.html</code> → click "Commit changes".</div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-body"><strong>Enable GitHub Pages</strong> → click Settings → Pages (left sidebar) → under "Source" select "Deploy from a branch" → branch: main, folder: / (root) → Save. Wait ~1 minute.</div></div>
+    <div class="step"><div class="step-num">6</div><div class="step-body"><strong>Your URL</strong> will be <code>https://YOURUSERNAME.github.io/march-matness</code> — share this with your pool participants!</div></div>
+    <div style="margin-top:1rem">
+      <button class="btn primary" onclick="downloadHTML()">Download index.html</button>
+    </div>
+  </div></div>
+</div>
+<div id="modal-root"></div>
+
+<script>
+// ============================================================
+// CONFIGURATION — fill these in after Supabase setup
+// ============================================================
+const CONFIG = {
+  supabaseUrl: localStorage.getItem('mm_url') || '',
+  supabaseKey: localStorage.getItem('mm_key') || '',
+  anthropicKey: '' // leave blank — handled by Claude API in-browser
+};
+
+// ============================================================
+// WRESTLER DATA — full 2026 field, 33 per weight
+// ============================================================
+const WEIGHTS = [125,133,141,149,157,165,174,184,197,285];
+const WRESTLERS = {
+  125:[{name:"Luke Lilledahl",school:"Penn State",seed:1},{name:"Eddie Ventresca",school:"Virginia Tech",seed:2},{name:"Nic Bouzakis",school:"Ohio State",seed:3},{name:"Sheldon Seymour",school:"Lehigh",seed:4},{name:"Troy Spratley",school:"Oklahoma State",seed:5},{name:"Jore Volk",school:"Minnesota",seed:6},{name:"Nico Provo",school:"Stanford",seed:7},{name:"Dean Peterson",school:"Iowa",seed:8},{name:"Maximo Renteria",school:"Oregon State",seed:9},{name:"Marc-Anthony McGowan",school:"Princeton",seed:10},{name:"Tyler Klinsky",school:"Rider",seed:11},{name:"Vincent Robinson",school:"NC State",seed:12},{name:"Stevo Poulin",school:"Iowa State",seed:13},{name:"Jacob Moran",school:"Indiana",seed:14},{name:"Koda Holeman",school:"Cal Poly",seed:15},{name:"Ezekiel Witt",school:"North Dakota State",seed:16},{name:"Jett Strickenberger",school:"West Virginia",seed:17},{name:"Spencer Moore",school:"Illinois",seed:18},{name:"Kysen Terukina",school:"North Carolina",seed:19},{name:"Diego Sotelo",school:"Michigan",seed:20},{name:"Conrad Hendriksen",school:"Oklahoma",seed:21},{name:"Davis Motyka",school:"Penn",seed:22},{name:"Nicolar Rivera",school:"Wisconsin",seed:23},{name:"Ayden Smith",school:"Rutgers",seed:24},{name:"Kael Lauridsen",school:"Nebraska",seed:25},{name:"Cooper Flynn",school:"Chattanooga",seed:26},{name:"Brady Roark",school:"South Dakota State",seed:27},{name:"Andrew Binni",school:"Navy",seed:28},{name:"Tyler Chappell",school:"Pittsburgh",seed:29},{name:"Sulayman Bah",school:"Columbia",seed:30},{name:"Desmond Pleasant",school:"Drexel",seed:31},{name:"Mack Mauger",school:"Missouri",seed:32},{name:"Jace Schafer",school:"Bloomsburg",seed:33}],
+  133:[{name:"Jax Forrest",school:"Oklahoma State",seed:1},{name:"Ben Davino",school:"Ohio State",seed:2},{name:"Marcus Blaze",school:"Penn State",seed:3},{name:"Aaron Seidel",school:"Virginia Tech",seed:4},{name:"Kyler Larkin",school:"Arizona State",seed:5},{name:"Drake Ayala",school:"Iowa",seed:6},{name:"Lucas Byrd",school:"Illinois",seed:7},{name:"Markel Baker",school:"Northern Illinois",seed:8},{name:"Dominick Serrano",school:"Northern Colorado",seed:9},{name:"Maximilian Leete",school:"American",seed:10},{name:"Tyler Ferrara",school:"Cornell",seed:11},{name:"Evan Mougalian",school:"Penn",seed:12},{name:"Jacob Van Dee",school:"Nebraska",seed:13},{name:"Ethan Berginc",school:"Army",seed:14},{name:"Tyler Knox",school:"Stanford",seed:15},{name:"Zan Fugitt",school:"Wisconsin",seed:16},{name:"TK Davis",school:"George Washington",seed:17},{name:"Gunner Andrick",school:"West Virginia",seed:18},{name:"Gage Walker",school:"Missouri",seed:19},{name:"Julian Farber",school:"Northern Iowa",seed:20},{name:"Sean Spidle",school:"Northwestern",seed:21},{name:"Zach Redding",school:"NC State",seed:22},{name:"Braxton Brown",school:"Maryland",seed:23},{name:"Blake Boarman",school:"Purdue",seed:24},{name:"Will Betancourt",school:"Rider",seed:25},{name:"Dylan Shawver",school:"Rutgers",seed:26},{name:"Marcel Lopez",school:"SIUE",seed:27},{name:"Garrett Grice",school:"Iowa State",seed:28},{name:"Luke Willochell",school:"Wyoming",seed:29},{name:"Gabe Whisenhunt",school:"Oregon State",seed:30},{name:"Gable Strickland",school:"Lehigh",seed:31},{name:"Andrew Austin",school:"CMU",seed:32},{name:"Carter Schmidt",school:"Oklahoma",seed:33}],
+  141:[{name:"Jesse Mendez",school:"Ohio State",seed:1},{name:"Sergio Vega",school:"Oklahoma State",seed:2},{name:"Brock Hardy",school:"Nebraska",seed:3},{name:"Anthony Echemendia",school:"Iowa State",seed:4},{name:"Luke Stanich",school:"Lehigh",seed:5},{name:"Vince Cornella",school:"Cornell",seed:6},{name:"Nasir Bailey",school:"Iowa",seed:7},{name:"Vance Vombaur",school:"Minnesota",seed:8},{name:"Joey Olivieri",school:"Rutgers",seed:9},{name:"Jack Consiglio",school:"Stanford",seed:10},{name:"CJ Composto",school:"Penn",seed:11},{name:"Luke Simcox",school:"North Carolina",seed:12},{name:"Wyatt Henson",school:"Lehigh",seed:13},{name:"Braeden Davis",school:"Penn State",seed:14},{name:"Elijah Griffin",school:"Rider",seed:15},{name:"Ryan Jack",school:"NC State",seed:16},{name:"Caedyn Ricciardi",school:"Navy",seed:17},{name:"Carter Nogle",school:"Air Force",seed:18},{name:"Haiden Drury",school:"Utah Valley",seed:19},{name:"Julian Tagg",school:"South Dakota State",seed:20},{name:"Tyler Wells",school:"Oklahoma",seed:21},{name:"Lorenzo Frezza",school:"Columbia",seed:22},{name:"Dylan Chappell",school:"Bucknell",seed:23},{name:"Nash Singleton",school:"Oregon State",seed:24},{name:"Tom Crook",school:"Virginia Tech",seed:25},{name:"Braden Basile",school:"Army",seed:26},{name:"Gable Porter",school:"Virginia",seed:27},{name:"Pierson Manville",school:"Arizona State",seed:28},{name:"Jordan Titus",school:"West Virginia",seed:29},{name:"Dario Lemus",school:"Maryland",seed:30},{name:"Billy DeKraker",school:"Northwestern",seed:31},{name:"Matthew Martino",school:"Princeton",seed:32},{name:"Aldo Hernandez",school:"Appalachian State",seed:33}],
+  149:[{name:"Shayne Van Ness",school:"Penn State",seed:1},{name:"Jaxon Joy",school:"Cornell",seed:2},{name:"Cross Wasilewski",school:"Penn",seed:3},{name:"Collin Gaj",school:"Virginia Tech",seed:4},{name:"Koy Buesgens",school:"NC State",seed:5},{name:"Caleb Tyus",school:"SIUE",seed:6},{name:"Ethan Stiles",school:"Ohio State",seed:7},{name:"Casey Swiderski",school:"Oklahoma State",seed:8},{name:"David Evans",school:"Utah Valley",seed:9},{name:"Aden Valencia",school:"Stanford",seed:10},{name:"Lachlan McNeil",school:"Michigan",seed:11},{name:"Carter Young",school:"Maryland",seed:12},{name:"Joseph Zargo",school:"Wisconsin",seed:13},{name:"Caleb Rathjen",school:"Northern Iowa",seed:14},{name:"Ryder Block",school:"Iowa",seed:15},{name:"Jacob Frost",school:"Iowa State",seed:16},{name:"Lucas Kapusta",school:"Lehigh",seed:17},{name:"Eugene Harney",school:"Morgan State",seed:18},{name:"Brock Herman",school:"Little Rock",seed:19},{name:"Chance Lamer",school:"Nebraska",seed:20},{name:"Gabe Willochell",school:"Wyoming",seed:21},{name:"Eligh Rivera",school:"Princeton",seed:22},{name:"Max Petersen",school:"North Dakota State",seed:23},{name:"Andrew Clark",school:"Rutgers",seed:24},{name:"Michael Gioffre",school:"Illinois",seed:25},{name:"Anderson Heap",school:"Davidson",seed:26},{name:"Andre Gonzales",school:"Cal Poly",seed:27},{name:"Kade Brown",school:"Pittsburgh",seed:28},{name:"Kaden Cassidy",school:"George Mason",seed:29},{name:"Dylan Layton",school:"Rider",seed:30},{name:"Ryan Michaels",school:"Edinboro",seed:31},{name:"Clayton Jones",school:"Michigan State",seed:32},{name:"Austin McBurney",school:"Brown",seed:33}],
+  157:[{name:"PJ Duke",school:"Penn State",seed:1},{name:"Antrell Taylor",school:"Nebraska",seed:2},{name:"Meyer Shapiro",school:"Cornell",seed:3},{name:"Kaleb Larkin",school:"Arizona State",seed:4},{name:"Landon Robideau",school:"Oklahoma State",seed:5},{name:"Jude Swisher",school:"Penn",seed:6},{name:"Kannon Webster",school:"Illinois",seed:7},{name:"Brandon Cannon",school:"Ohio State",seed:8},{name:"Daniel Cardenas",school:"Stanford",seed:9},{name:"Logan Rozynski",school:"Lehigh",seed:10},{name:"Ty Watters",school:"West Virginia",seed:11},{name:"Vinny Zerban",school:"Iowa State",seed:12},{name:"Derek Raike",school:"Ohio",seed:13},{name:"Ethen Miller",school:"Virginia Tech",seed:14},{name:"Cameron Catrabone",school:"Michigan",seed:15},{name:"Cael Swensen",school:"South Dakota State",seed:16},{name:"Luke Mechler",school:"Wisconsin",seed:17},{name:"DJ McGee",school:"George Mason",seed:18},{name:"Kai Owen",school:"Columbia",seed:19},{name:"Jimmy Harrington",school:"Harvard",seed:20},{name:"Charlie Millard",school:"Minnesota",seed:21},{name:"Colton Washleski",school:"Virginia",seed:22},{name:"Kaleb Burgess",school:"Buffalo",seed:23},{name:"Jaivon Jones",school:"Little Rock",seed:24},{name:"Mason Shrader",school:"CMU",seed:25},{name:"Jonathan Ley",school:"Navy",seed:26},{name:"Dylan Evans",school:"Pittsburgh",seed:27},{name:"Gavin Drexler",school:"North Dakota State",seed:28},{name:"Bryce Lowery",school:"Indiana",seed:29},{name:"Laird Root",school:"North Carolina",seed:30},{name:"Garrett McChesney",school:"Edinboro",seed:31},{name:"Jeb Prechtel",school:"Bellarmine",seed:32},{name:"Yannis Charles",school:"Morgan State",seed:33}],
+  165:[{name:"Mitchell Mesenbrink",school:"Penn State",seed:1},{name:"Joey Blaze",school:"Purdue",seed:2},{name:"Mikey Caliendo",school:"Iowa",seed:3},{name:"Nicco Ruiz",school:"Arizona State",seed:4},{name:"LaDarion Lockett",school:"Oklahoma State",seed:5},{name:"LJ Araujo",school:"Nebraska",seed:6},{name:"Max Brignola",school:"Lehigh",seed:7},{name:"Matty Bianchi",school:"Little Rock",seed:8},{name:"Bryce Hepner",school:"North Carolina",seed:9},{name:"Will Denny",school:"NC State",seed:10},{name:"Ryder Downey",school:"Northern Iowa",seed:11},{name:"Cesar Alvan",school:"Columbia",seed:12},{name:"Andrew Sparks",school:"Minnesota",seed:13},{name:"Andrew Barbosa",school:"Rutgers",seed:14},{name:"Connor Euton",school:"Iowa State",seed:15},{name:"Paddy Gallagher",school:"Ohio State",seed:16},{name:"Braeden Scoles",school:"Illinois",seed:17},{name:"Gunner Filipowicz",school:"Army",seed:18},{name:"Noah Mulvaney",school:"Bucknell",seed:19},{name:"Ty Whalen",school:"Princeton",seed:20},{name:"Brock Woodcock",school:"SIUE",seed:21},{name:"Matthew Olguin",school:"Oregon State",seed:22},{name:"Chris Earnest",school:"Kent State",seed:23},{name:"Sean Seefeldt",school:"Penn",seed:24},{name:"Mac Church",school:"Virginia Tech",seed:25},{name:"Tyler Lillard",school:"Indiana",seed:26},{name:"EJ Parco",school:"Stanford",seed:27},{name:"Cody Goebel",school:"Wisconsin",seed:28},{name:"Ryan Burgos",school:"Edinboro",seed:29},{name:"Thomas Snipes",school:"Citadel",seed:30},{name:"Jared Keslar",school:"Pittsburgh",seed:31},{name:"Cody Walsh",school:"Drexel",seed:32},{name:"Ryan Vigil",school:"VMI",seed:33}],
+  174:[{name:"Levi Haines",school:"Penn State",seed:1},{name:"Simon Ruiz",school:"Cornell",seed:2},{name:"Christopher Minto",school:"Nebraska",seed:3},{name:"Carson Kharchla",school:"Ohio State",seed:4},{name:"Patrick Kennedy",school:"Iowa",seed:5},{name:"Matty Singleton",school:"NC State",seed:6},{name:"Cam Steed",school:"Missouri",seed:7},{name:"Alex Facundo",school:"Oklahoma State",seed:8},{name:"Beau Mantanona",school:"Michigan",seed:9},{name:"Myles Takats",school:"Bucknell",seed:10},{name:"MJ Gaitan",school:"Iowa State",seed:11},{name:"Carter Schubert",school:"Oklahoma",seed:12},{name:"Carter Baer",school:"Binghamton",seed:13},{name:"Moses Espinoza-Owens",school:"South Dakota State",seed:14},{name:"Danny Wask",school:"Navy",seed:15},{name:"Nick Fine",school:"Columbia",seed:16},{name:"Jared Simma",school:"Northern Iowa",seed:17},{name:"Colin Kelly",school:"Illinois",seed:18},{name:"Logan Messer",school:"George Mason",seed:19},{name:"Daschle Lamer",school:"Oregon State",seed:20},{name:"Lenny Pinto",school:"Rutgers",seed:21},{name:"Brody Baumann",school:"Purdue",seed:22},{name:"Luca Augustine",school:"Pittsburgh",seed:23},{name:"Garrett Thompson",school:"Ohio",seed:24},{name:"Sergio Desiante",school:"Virginia Tech",seed:25},{name:"Derek Gilcher",school:"Indiana",seed:26},{name:"Collin Carrigan",school:"North Carolina",seed:27},{name:"Holden Garcia",school:"Princeton",seed:28},{name:"Avery Bassett",school:"Lehigh",seed:29},{name:"Riley Davis",school:"Wyoming",seed:30},{name:"Cael Valencia",school:"Arizona State",seed:31},{name:"Luke Condon",school:"Wisconsin",seed:32},{name:"Grant ODell",school:"Bellarmine",seed:33}],
+  184:[{name:"Rocco Welsh",school:"Penn State",seed:1},{name:"Aeoden Sinclair",school:"Missouri",seed:2},{name:"Max McEnelly",school:"Minnesota",seed:3},{name:"James Conway",school:"Franklin & Marshall",seed:4},{name:"Brock Mantanona",school:"Michigan",seed:5},{name:"Eddie Neitenbach",school:"Wyoming",seed:6},{name:"Angelo Ferrari",school:"Iowa",seed:7},{name:"Silas Allred",school:"Nebraska",seed:8},{name:"Chris Moore",school:"Illinois",seed:9},{name:"Caleb Campos",school:"American",seed:10},{name:"Shane Cartagena-Walsh",school:"Rutgers",seed:11},{name:"Dylan Fishback",school:"Ohio State",seed:12},{name:"Isaac Dean",school:"Iowa State",seed:13},{name:"Jaden Bullock",school:"Virginia Tech",seed:14},{name:"Sal Perrine",school:"Ohio",seed:15},{name:"Rylan Rogers",school:"Lehigh",seed:16},{name:"Ian Bush",school:"West Virginia",seed:17},{name:"Jake Dailey",school:"North Carolina",seed:18},{name:"Jared McGill",school:"Edinboro",seed:19},{name:"Brian Soldano",school:"Oklahoma",seed:20},{name:"Tomas Brooker",school:"Appalachian State",seed:21},{name:"Zack Ryder",school:"Oklahoma State",seed:22},{name:"Ceasar Garza",school:"Cal Poly",seed:23},{name:"Joe Curtis",school:"Columbia",seed:24},{name:"Malachi DuVall",school:"George Mason",seed:25},{name:"Chase Kranitz",school:"Pittsburgh",seed:26},{name:"Aidan Brenot",school:"North Dakota State",seed:27},{name:"Abraham Wojcikiewicz",school:"Stanford",seed:28},{name:"Nick Fox",school:"Northern Iowa",seed:29},{name:"Tyler Bienus",school:"Bucknell",seed:30},{name:"Mahonri Rushton",school:"Northern Colorado",seed:31},{name:"Caleb Uhlenhopp",school:"Utah Valley",seed:32},{name:"Sam Goin",school:"Indiana",seed:33}],
+  197:[{name:"Josh Barr",school:"Penn State",seed:1},{name:"Rocky Elam",school:"Iowa State",seed:2},{name:"Stephen Little",school:"Little Rock",seed:3},{name:"Sonny Sasso",school:"Virginia Tech",seed:4},{name:"Joey Novak",school:"Wyoming",seed:5},{name:"Justin Rademacher",school:"Oregon State",seed:6},{name:"Cody Merrill",school:"Oklahoma State",seed:7},{name:"DJ Parker",school:"Oklahoma",seed:8},{name:"Angelo Posada",school:"Stanford",seed:9},{name:"Mac Stout",school:"Pittsburgh",seed:10},{name:"Camden McDanel",school:"Nebraska",seed:11},{name:"Luke Geog",school:"Ohio State",seed:12},{name:"Bennett Berge",school:"South Dakota State",seed:13},{name:"Gabe Sollars",school:"Indiana",seed:14},{name:"Remy Cotton",school:"Rutgers",seed:15},{name:"Branson John",school:"Maryland",seed:16},{name:"Dillon Bechtold",school:"Bucknell",seed:17},{name:"Andrew Reall",school:"Brown",seed:18},{name:"Zayne Lehman",school:"Ohio",seed:19},{name:"Wyatt Ingham",school:"Wisconsin",seed:20},{name:"Rune Lawrence",school:"West Virginia",seed:21},{name:"Devin Wasley",school:"North Dakota State",seed:22},{name:"Mikey Squires",school:"Binghamton",seed:23},{name:"Brock Zurawski",school:"Rider",seed:24},{name:"Evan Bates",school:"Missouri",seed:25},{name:"Ben Vanadia",school:"Purdue",seed:26},{name:"Gabe Arnold",school:"Iowa",seed:27},{name:"Kael Wisler",school:"Michigan State",seed:28},{name:"Colton Hawks",school:"Arizona State",seed:29},{name:"Kade Rule",school:"Chattanooga",seed:30},{name:"Kael Bennie",school:"Utah Valley",seed:31},{name:"Blake Schaffer",school:"Kent State",seed:32},{name:"Karson Tompkins",school:"Air Force",seed:33}],
+  285:[{name:"Yonger Bastida",school:"Iowa State",seed:1},{name:"Isaac Trumble",school:"NC State",seed:2},{name:"Taye Ghadiali",school:"Michigan",seed:3},{name:"AJ Ferrari",school:"Nebraska",seed:4},{name:"Nick Feldman",school:"Ohio State",seed:5},{name:"Nathan Taylor",school:"Lehigh",seed:6},{name:"Konner Doucet",school:"Oklahoma State",seed:7},{name:"Ben Kueter",school:"Iowa",seed:8},{name:"Cole Mirasola",school:"Penn State",seed:9},{name:"David Szuba",school:"Arizona State",seed:10},{name:"Devon Dawson",school:"Northern Illinois",seed:11},{name:"Braxton Amos",school:"Wisconsin",seed:12},{name:"Spencer Lanosga",school:"Navy",seed:13},{name:"Koy Hopke",school:"Minnesota",seed:14},{name:"Brady Colbert",school:"Army",seed:15},{name:"Jimmy Mullen",school:"Virginia Tech",seed:16},{name:"Vincent Mueller",school:"Columbia",seed:17},{name:"Christian Carroll",school:"Wyoming",seed:18},{name:"Nate Schon",school:"Drexel",seed:19},{name:"Dayton Pitzer",school:"Pittsburgh",seed:20},{name:"Juan Mora",school:"Oklahoma",seed:21},{name:"Trevor Tinker",school:"Cal Poly",seed:22},{name:"Stephan Monchery",school:"Appalachian State",seed:23},{name:"Connor Barket",school:"Duke",seed:24},{name:"Alex Semenenko",school:"Brown",seed:25},{name:"Luke Luffman",school:"Illinois",seed:26},{name:"Hunter Catka",school:"Rutgers",seed:27},{name:"Jarrett Stoner",school:"Missouri",seed:28},{name:"Luke Rasmussen",school:"South Dakota State",seed:29},{name:"Jack Forbes",school:"Utah Valley",seed:30},{name:"Brenan Morgan",school:"Virginia",seed:31},{name:"Emmanuel Ulrich",school:"American",seed:32},{name:"Mason Rebuck",school:"Bloomsburg",seed:33}]
+};
+
+// Name lookup
+function buildLookup(){
+  const L={};
+  WEIGHTS.forEach(w=>{
+    L[w]={};
+    WRESTLERS[w].forEach(wr=>{
+      const parts=wr.name.trim().split(' ');
+      const last=parts[parts.length-1].toLowerCase();
+      const first=parts.slice(0,-1).join(' ').toLowerCase();
+      L[w][last+','+first]=wr; L[w][last+', '+first]=wr;
+      L[w][wr.name.toLowerCase()]=wr;
+      if(!L[w]['_l_'+last]) L[w]['_l_'+last]=wr;
+    });
+  });
+  return L;
+}
+const LOOKUP=buildLookup();
+function matchName(weight,raw){
+  if(!raw) return null;
+  const key=raw.trim().toLowerCase().replace(/\s+/g,' ').replace(/\s*\([^)]+\)/,'');
+  const L=LOOKUP[weight];
+  if(L[key]) return L[key];
+  const ln=key.split(',')[0].trim();
+  if(L['_l_'+ln]) return L['_l_'+ln];
+  for(const k of Object.keys(L)) if(!k.startsWith('_l_')&&k.split(',')[0]===ln) return L[k];
+  return null;
+}
+
+// ============================================================
+// SUPABASE
+// ============================================================
+let sb = null;
+let dbReady = false;
+
+function readableError(e) {
+  if (!e) return 'Unknown error';
+  if (typeof e === 'string') return e;
+  if (e.message) return e.message;
+  if (e.error_description) return e.error_description;
+  if (e.msg) return e.msg;
+  if (e.code) return `Error code: ${e.code}${e.details ? ' — ' + e.details : ''}${e.hint ? ' — Hint: ' + e.hint : ''}`;
+  try { return JSON.stringify(e); } catch(_) { return 'Unknown error'; }
+}
+
+async function initSupabase() {
+  const url = (localStorage.getItem('mm_url') || '').trim().replace(/\/$/, '');
+  const key = (localStorage.getItem('mm_key') || '').trim();
+  if (!url || !key) { setDbStatus(false, 'Not configured'); return false; }
+  try {
+    // Reuse existing client if already created with same credentials
+    if (!sb) sb = supabase.createClient(url, key, { auth: { persistSession: false } });
+    const { error } = await sb.from('participants').select('id').limit(1);
+    if (error) throw error;
+    dbReady = true;
+    setDbStatus(true, 'Connected');
+    return true;
+  } catch(e) {
+    const msg = readableError(e);
+    setDbStatus(false, 'Error: ' + msg);
+    console.error('Supabase error:', e);
+    return { error: msg };
+  }
+}
+
+function setDbStatus(ok, msg) {
+  const dot = document.getElementById('db-dot');
+  const lbl = document.getElementById('db-label');
+  if (dot) { dot.className = 'db-dot' + (ok ? ' connected' : ' error'); }
+  if (lbl) lbl.textContent = msg;
+}
+
+// DB helpers
+async function dbGetParticipants() {
+  if (!dbReady) return [];
+  const { data, error } = await sb.from('participants').select('*').order('created_at');
+  if (error) { console.error(error); return []; }
+  return data || [];
+}
+async function dbGetResults() {
+  if (!dbReady) return [];
+  const { data, error } = await sb.from('results').select('*').order('created_at');
+  if (error) { console.error(error); return []; }
+  return data || [];
+}
+async function dbInsertParticipant(p) {
+  const { data, error } = await sb.from('participants').insert([p]).select();
+  if (error) throw error;
+  return data[0];
+}
+async function dbUpdateParticipant(id, roster) {
+  const { error } = await sb.from('participants').update({ roster }).eq('id', id);
+  if (error) throw error;
+}
+async function dbDeleteParticipant(id) {
+  const { error } = await sb.from('participants').delete().eq('id', id);
+  if (error) throw error;
+}
+async function dbInsertResults(rows) {
+  const { error } = await sb.from('results').insert(rows);
+  if (error) throw error;
+}
+async function dbDeleteResult(id) {
+  const { error } = await sb.from('results').delete().eq('id', id);
+  if (error) throw error;
+}
+async function dbClearResults() {
+  const { error } = await sb.from('results').delete().neq('id', -999);
+  if (error) throw error;
+}
+
+// In-memory cache (refreshed on each tab render)
+let cache = { participants: [], results: [], lastFetch: 0 };
+
+async function refreshCache() {
+  const [participants, results] = await Promise.all([dbGetParticipants(), dbGetResults()]);
+  cache.participants = participants;
+  cache.results = results;
+  cache.lastFetch = Date.now();
+}
+
+// ============================================================
+// SCORING
+// ============================================================
+const BONUS = { decision:0, major:1, tech_no_nf:1.5, tech_nf:2, fall:2, forfeit:2 };
+
+function getSeedClass(s){ if(!s||s>33)return 's9up'; if(s<=2)return 's12'; if(s<=4)return 's34'; if(s<=6)return 's56'; if(s<=8)return 's78'; return 's9up'; }
+function getSeedLabel(s){ return(!s||s>33)?'Uns':'#'+s; }
+
+function calcWPts(weight, name) {
+  return Math.round(cache.results
+    .filter(r => r.weight == weight && r.wrestler_name === name)
+    .reduce((a,r) => a + (r.bracket==='champ'?1:.5) + (BONUS[r.result_type]||0) + (r.placement_pts||0), 0) * 10) / 10;
+}
+
+function calcPPts(p) {
+  const roster = p.roster || {};
+  let total = 0; const detail = {};
+  WEIGHTS.forEach(w => {
+    const wr = roster[w];
+    if (!wr) { detail[w] = { total:0, name:null }; return; }
+    const pts = calcWPts(w, wr.name);
+    total += pts;
+    detail[w] = { total: pts, name: wr.name, seed: wr.seed, school: wr.school };
+  });
+  return { total: Math.round(total*10)/10, detail };
+}
+
+function getRanked() {
+  return cache.participants.map(p => {
+    const { total, detail } = calcPPts(p);
+    let ls = -1, lsc = 0;
+    WEIGHTS.forEach(w => { const d = detail[w]; if(d&&d.seed){ const e=d.seed>33?999:d.seed; if(e>ls){ls=e;lsc=d.total;} } });
+    return { ...p, total, detail, ls, lsc };
+  }).sort((a,b) => b.total!==a.total ? b.total-a.total : b.lsc!==a.lsc ? b.lsc-a.lsc : b.ls-a.ls);
+}
+
+function calcPayouts(n, fee=20) {
+  const tot=n*fee, adm=tot*.015, pool=tot-adm;
+  const pcts=[.40,.22,.125,.09,.06,.04,.03,.02];
+  return { tot, adm:Math.round(adm*100)/100, pool:Math.round(pool*100)/100,
+    pays: pcts.map((p,i) => ({ place:i+1, pct:p, amt:Math.round(pool*p*100)/100 })) };
+}
+
+function validateRoster(roster) {
+  let s12=0,s34=0,s56=0,s78=0,s9=0;
+  WEIGHTS.forEach(w => { const wr=roster[w]; if(!wr)return; const s=wr.seed||99;
+    if(s<=2)s12++; else if(s<=4)s34++; else if(s<=6)s56++; else if(s<=8)s78++; else s9++; });
+  const err = [];
+  if(s12>2) err.push(`Max 2 seeded #1-2 (have ${s12})`);
+  if(s34>2) err.push(`Max 2 seeded #3-4 (have ${s34})`);
+  if(s56>2) err.push(`Max 2 seeded #5-6 (have ${s56})`);
+  if(s78>2) err.push(`Max 2 seeded #7-8 (have ${s78})`);
+  const filled = WEIGHTS.filter(w => roster[w]).length;
+  if(filled<10) err.push(`${10-filled} weight class(es) missing`);
+  return { valid:err.length===0, err, counts:{s12,s34,s56,s78,s9}, filled };
+}
+
+// ============================================================
+// LIVE SYNC
+// ============================================================
+let syncRunning = false;
+async function liveSync() {
+  if (syncRunning) return;
+  if (!dbReady) { alert('Database not connected. Complete setup first.'); return; }
+  syncRunning = true;
+  setSyncUI(true, 'Fetching live results...');
+  try {
+    const allNames = {};
+    WEIGHTS.forEach(w => { allNames[w] = WRESTLERS[w].map(wr => wr.name); });
+
+    const prompt = `You are a sports data assistant. Search the web for current results from the 2026 NCAA Division I Wrestling Championships (March 19-21, Cleveland, Rocket Arena). Check: https://www.ncaa.com/news/wrestling-men/article/2026-03-12/2026-ncaa-di-mens-wrestling-championships-brackets-schedule-results and any other live result sources you find.
+
+Return ONLY valid JSON, no prose, no markdown fences:
+{"results":[{"weight":125,"winner":"First Last","bracket":"champ","round":"R1","result_type":"decision","placement_pts":0}],"summary":"one line status"}
+
+Rules:
+- weight: one of 125,133,141,149,157,165,174,184,197,285
+- winner: EXACT name from: ${JSON.stringify(allNames)}
+- bracket: "champ" or "cons"
+- round: "R1","R2","QF","SF","3rd","5th","7th","Finals"
+- result_type: "decision","major","tech_no_nf","tech_nf","fall","forfeit"
+- placement_pts: 6=6th locked,7=5th,9=4th,10=3rd,12=2nd,16=champion, else 0
+- Include ALL completed match wins, both brackets
+- If tournament not started: {"results":[],"summary":"Tournament not yet started"}`;
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!resp.ok) throw new Error(`API ${resp.status}`);
+    const data = await resp.json();
+    const text = data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON in response');
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    // Get existing result keys to deduplicate
+    const existing = new Set(cache.results.map(r => `${r.weight}|${r.wrestler_name}|${r.bracket}|${r.round}`));
+    const toInsert = [];
+    (parsed.results || []).forEach(r => {
+      const key = `${r.weight}|${r.winner}|${r.bracket}|${r.round}`;
+      if (existing.has(key)) return;
+      const wr = matchName(r.weight, r.winner) || WRESTLERS[r.weight]?.find(w=>w.name===r.winner);
+      if (!wr) return;
+      toInsert.push({
+        weight: parseInt(r.weight),
+        wrestler_name: wr.name,
+        bracket: r.bracket==='cons'?'cons':'champ',
+        round: r.round||'R1',
+        result_type: r.result_type||'decision',
+        placement_pts: parseFloat(r.placement_pts)||0,
+        source: 'auto'
+      });
+    });
+
+    if (toInsert.length > 0) await dbInsertResults(toInsert);
+    await refreshCache();
+
+    const now = new Date().toLocaleTimeString();
+    setSyncUI(false, `Last sync: ${now} — ${parsed.summary||''} (+${toInsert.length} new)`, 'live');
+    renderAll();
+  } catch(e) {
+    setSyncUI(false, `Sync failed: ${e.message}`, 'err');
+  } finally {
+    syncRunning = false;
+  }
+}
+
+function setSyncUI(loading, msg, cls='') {
+  const btn = document.getElementById('sync-btn');
+  const st = document.getElementById('sync-status');
+  if (btn) { btn.disabled = loading; btn.innerHTML = loading ? '<span class="spinner"></span> Syncing...' : 'Live sync results'; }
+  if (st) { st.textContent = msg; st.className = 'sync-status' + (cls ? ' '+cls : ''); }
+}
+
+// ============================================================
+// IMPORT
+// ============================================================
+async function handleImport(file) {
+  if (!dbReady) { alert('Connect to database first.'); return; }
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type:'array' });
+      const ws = wb[wb.SheetNames.length>1 ? wb.SheetNames[1] : wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:null });
+      let hRow = -1;
+      for (let i=0; i<Math.min(5,raw.length); i++) { if(raw[i]&&raw[i].some(v=>v==125||v==='125')){hRow=i;break;} }
+      if (hRow<0) { showImportResult(null,'Could not find weight class headers.'); return; }
+      const hdrs = raw[hRow];
+      const wCols = {};
+      WEIGHTS.forEach(w => { const i=hdrs.findIndex(h=>h==w||h==''+w); if(i>=0)wCols[w]=i; });
+      const toInsert=[], unmatched=[], skipped=[];
+      const existingNames = new Set(cache.participants.map(p=>p.name));
+      for (let i=hRow+1; i<raw.length; i++) {
+        const row=raw[i]; if(!row||!row[0]) continue;
+        const name=String(row[0]).trim(); if(!name) continue;
+        if (existingNames.has(name)) { skipped.push(name); continue; }
+        const roster={}, um=[];
+        WEIGHTS.forEach(w => {
+          const col=wCols[w]; if(col===undefined)return;
+          const val=row[col]; if(!val)return;
+          const raw2=String(val).trim();
+          const wr=matchName(w,raw2);
+          if(wr) roster[w]=wr; else { um.push({weight:w,raw:raw2}); roster[w]={name:raw2,seed:99,school:'?'}; }
+        });
+        if(um.length) unmatched.push({participant:name,wrestlers:um});
+        toInsert.push({ name, roster });
+      }
+      for (const p of toInsert) {
+        await dbInsertParticipant({ name: p.name, roster: p.roster });
+      }
+      await refreshCache();
+      showImportResult({ imported:toInsert.length, skipped, unmatched }, null);
+      renderAll();
+    } catch(err) { showImportResult(null,'Error: '+err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function showImportResult(r, err) {
+  if (err) { showModal(`<div class="modal-header"><div class="modal-title">Import failed</div><button class="close-btn" onclick="closeModal()">×</button></div><div class="alert error">${err}</div>`); return; }
+  let h = `<div class="modal-header"><div class="modal-title">Import complete</div><button class="close-btn" onclick="closeModal()">×</button></div>`;
+  h += `<div class="alert success">Imported ${r.imported} participant${r.imported!==1?'s':''}.</div>`;
+  if (r.skipped.length) h += `<div class="alert warn">Skipped ${r.skipped.length} duplicate(s): ${r.skipped.slice(0,5).join(', ')}</div>`;
+  const totalUm = r.unmatched.reduce((a,u)=>a+u.wrestlers.length,0);
+  if (totalUm) {
+    h += `<div class="alert warn">${totalUm} wrestler name(s) didn't match 2026 field — stored as unseeded.</div>`;
+    h += `<div style="max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px">`;
+    r.unmatched.forEach(u=>u.wrestlers.forEach(w=>{ h+=`<div class="unmatched-row"><span style="min-width:32px;color:var(--text2)">${w.weight}</span><span>${u.participant}</span><span style="margin-left:auto;color:var(--text2)">"${w.raw}"</span></div>`; }));
+    h += '</div>';
+  }
+  h += `<div style="margin-top:1rem;text-align:right"><button class="btn primary" onclick="closeModal()">Done</button></div>`;
+  showModal(h);
+}
+
+// ============================================================
+// RENDER — LEADERBOARD
+// ============================================================
+function renderLeaderboard() {
+  const ranked = getRanked();
+  const { tot, adm, pool, pays } = calcPayouts(cache.participants.length);
+  let h = `<div class="sync-panel">
+    <div>
+      <div style="font-weight:600;font-size:14px;margin-bottom:2px">Live results sync</div>
+      <div id="sync-status" class="sync-status">${dbReady ? 'Ready — hit sync during the tournament' : 'Database not connected — see Setup tab'}</div>
+    </div>
+    <button id="sync-btn" class="btn sync" onclick="liveSync()" ${!dbReady?'disabled':''}>Live sync results</button>
+  </div>
+  <div class="metric-row">
+    <div class="metric"><div class="metric-label">Entries</div><div class="metric-val">${cache.participants.length}</div></div>
+    <div class="metric"><div class="metric-label">Total collected</div><div class="metric-val">$${tot}</div></div>
+    <div class="metric"><div class="metric-label">Prize pool</div><div class="metric-val">$${pool}</div></div>
+    <div class="metric"><div class="metric-label">Admin fee</div><div class="metric-val">$${adm}</div></div>
+    <div class="metric"><div class="metric-label">1st place</div><div class="metric-val gold">$${pays[0].amt}</div></div>
+    <div class="metric"><div class="metric-label">Results</div><div class="metric-val">${cache.results.length}</div></div>
+  </div>`;
+
+  if (!ranked.length) {
+    h += `<div class="card"><div class="empty-state"><div class="empty-icon">🤼</div><div>No entries yet.</div><div style="font-size:12px;margin-top:.5rem">Import your Excel file in the Admin tab.</div></div></div>`;
+  } else {
+    h += `<div class="card"><table><thead><tr><th style="width:40px">Rank</th><th>Participant</th><th style="text-align:right">Points</th><th style="text-align:right">Est. payout</th><th></th></tr></thead><tbody>`;
+    ranked.forEach((p,i) => {
+      const rk=i+1, pay=pays[i]?'$'+pays[i].amt:'—', bc=rk===1?'r1':rk===2?'r2':rk===3?'r3':'';
+      h += `<tr><td><span class="rank-badge ${bc}">${rk}</span></td><td style="font-weight:600">${p.name}</td><td style="text-align:right;font-weight:600">${p.total}</td><td style="text-align:right;color:${rk<=8?'var(--green)':'var(--text2)'}">${pay}</td><td style="text-align:right"><button class="btn sm" onclick="showDetail('${p.id}')">View</button></td></tr>`;
+    });
+    h += '</tbody></table></div>';
+  }
+  document.getElementById('leaderboard').innerHTML = h;
+}
+
+// ============================================================
+// RENDER — ROSTERS
+// ============================================================
+function renderRosterTab() {
+  const ranked = getRanked();
+  let h = `<div class="section-title">All rosters (${ranked.length})</div>`;
+  if (!ranked.length) { h += `<div class="card"><div class="empty-state"><div class="empty-icon">📋</div>No entries yet.</div></div>`; }
+  else ranked.forEach((p,i) => {
+    h += `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div><span style="font-weight:600">${p.name}</span><span style="color:var(--text2);font-size:13px;margin-left:8px">Rank #${i+1} — ${p.total} pts</span></div>
+    </div><table><thead><tr><th>Wt</th><th>Wrestler</th><th>School</th><th>Seed</th><th style="text-align:right">Pts</th></tr></thead><tbody>`;
+    WEIGHTS.forEach(w => {
+      const d = p.detail[w];
+      if (!d||!d.name) { h+=`<tr><td>${w}</td><td colspan="4" style="color:var(--text2);font-style:italic">No pick</td></tr>`; return; }
+      h += `<tr><td style="color:var(--text2)">${w}</td><td style="font-weight:500">${d.name}</td><td style="color:var(--text2);font-size:12px">${d.school||''}</td><td><span class="seed-chip ${getSeedClass(d.seed)}">${getSeedLabel(d.seed)}</span></td><td style="text-align:right" class="pts-green">${d.total}</td></tr>`;
+    });
+    h += '</tbody></table></div>';
+  });
+  document.getElementById('roster').innerHTML = h;
+}
+
+// ============================================================
+// RENDER — RESULTS
+// ============================================================
+function renderResultsTab() {
+  let h = `<div class="section-title">Results</div>
+  <div class="alert info">Use "Live sync results" on the Leaderboard tab during the tournament. Add or remove results manually here if needed.</div>
+  <div class="card">
+    <div style="font-weight:600;font-size:13px;margin-bottom:10px">Add result manually</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="form-group"><label>Weight</label><select id="res-weight" onchange="popW()">${WEIGHTS.map(w=>`<option value="${w}">${w} lbs</option>`).join('')}</select></div>
+      <div class="form-group"><label>Winning wrestler</label><select id="res-wrestler"></select></div>
+      <div class="form-group"><label>Bracket</label><select id="res-bracket"><option value="champ">Championship (+1)</option><option value="cons">Consolation (+0.5)</option></select></div>
+      <div class="form-group"><label>Round</label><select id="res-round"><option value="R1">Round 1</option><option value="R2">Round 2</option><option value="QF">Quarterfinals</option><option value="SF">Semifinals</option><option value="3rd">3rd place</option><option value="5th">5th place</option><option value="7th">7th place</option><option value="Finals">Finals</option></select></div>
+      <div class="form-group"><label>Result type</label><select id="res-type"><option value="decision">Decision</option><option value="major">Major decision (+1)</option><option value="tech_no_nf">Tech fall, no near fall (+1.5)</option><option value="tech_nf">Tech fall w/ near fall (+2)</option><option value="fall">Fall/Pin (+2)</option><option value="forfeit">Forfeit/DQ (+2)</option></select></div>
+      <div class="form-group"><label>Placement pts</label><select id="res-plac"><option value="0">None</option><option value="6">6th locked (6)</option><option value="7">5th locked (7)</option><option value="9">4th locked (9)</option><option value="10">3rd locked (10)</option><option value="12">2nd locked (12)</option><option value="16">Champion (16)</option></select></div>
+    </div>
+    <button class="btn primary" onclick="addManual()">Add result</button>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem">
+    <div class="section-title" style="margin:0">All results (${cache.results.length})</div>
+    ${cache.results.length?`<button class="btn sm danger" onclick="clearAllResults()">Clear all</button>`:''}
+  </div>`;
+  if (!cache.results.length) { h += `<div class="card"><div class="empty-state">No results yet.</div></div>`; }
+  else {
+    h += `<div class="card"><table><thead><tr><th>Wt</th><th>Wrestler</th><th>Bracket</th><th>Round</th><th>Type</th><th>Plcmt</th><th>Src</th><th></th></tr></thead><tbody>`;
+    [...cache.results].reverse().forEach(r => {
+      h += `<tr><td>${r.weight}</td><td>${r.wrestler_name}</td><td style="color:var(--text2)">${r.bracket==='champ'?'Champ':'Cons'}</td><td>${r.round}</td><td style="font-size:12px;color:var(--text2)">${(r.result_type||'').replace(/_/g,' ')}</td><td>${r.placement_pts||0}</td><td style="font-size:11px;color:var(--text2)">${r.source||'manual'}</td><td><button class="btn sm danger" onclick="delResult('${r.id}')">×</button></td></tr>`;
+    });
+    h += '</tbody></table></div>';
+  }
+  document.getElementById('results').innerHTML = h;
+  popW();
+}
+
+function popW() {
+  const w = parseInt(document.getElementById('res-weight')?.value);
+  const sel = document.getElementById('res-wrestler'); if(!sel) return;
+  sel.innerHTML = WRESTLERS[w].map(wr=>`<option value="${wr.name}">${wr.name} (#${wr.seed})</option>`).join('');
+}
+
+async function addManual() {
+  if (!dbReady) { alert('Database not connected.'); return; }
+  const weight=parseInt(document.getElementById('res-weight').value);
+  await dbInsertResults([{ weight, wrestler_name:document.getElementById('res-wrestler').value, bracket:document.getElementById('res-bracket').value, round:document.getElementById('res-round').value, result_type:document.getElementById('res-type').value, placement_pts:parseFloat(document.getElementById('res-plac').value)||0, source:'manual' }]);
+  await refreshCache(); renderAll();
+}
+async function delResult(id) {
+  await dbDeleteResult(id); await refreshCache(); renderAll();
+}
+async function clearAllResults() {
+  if (!confirm('Clear ALL results?')) return;
+  await dbClearResults(); await refreshCache(); renderAll();
+}
+
+// ============================================================
+// RENDER — ADMIN
+// ============================================================
+function renderAdminTab() {
+  const { tot, adm, pool, pays } = calcPayouts(cache.participants.length);
+  let h = `<div class="section-title">Import rosters from Excel</div>
+  <div class="card">
+    <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Upload your roster spreadsheet. Second tab, participant names in column A, wrestler picks in "Last, First" format under weight headers (125 … 285).</div>
+    <div class="import-drop" onclick="document.getElementById('xl-inp').click()">
+      <input type="file" id="xl-inp" accept=".xlsx,.xls" onchange="handleImport(this.files[0])">
+      <div style="font-size:24px;margin-bottom:.5rem">📂</div>
+      <div style="font-weight:600;margin-bottom:4px">Click to upload Excel file</div>
+      <div style="font-size:12px;color:var(--text2)">.xlsx — second tab, Last, First format</div>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="section-title">Add participant manually</div>
+  <div class="card">
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+      <div class="form-group" style="flex:1;min-width:160px"><label>Name</label><input type="text" id="new-name" placeholder="Participant name" onkeydown="if(event.key==='Enter')addP()"></div>
+      <button class="btn primary" onclick="addP()">Add</button>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem">
+    <div class="section-title" style="margin:0">Participants (${cache.participants.length})</div>
+    ${cache.participants.length?`<button class="btn sm danger" onclick="clearAllParticipants()">Clear all</button>`:''}
+  </div>`;
+  if (!cache.participants.length) { h += `<div class="card"><div class="empty-state">No participants yet.</div></div>`; }
+  else {
+    h += `<div class="card"><table><thead><tr><th>Name</th><th>Roster</th><th></th></tr></thead><tbody>`;
+    cache.participants.forEach(p => {
+      const roster = p.roster||{};
+      const filled = WEIGHTS.filter(w=>roster[w]).length;
+      const { valid } = validateRoster(roster);
+      const color = filled===10&&valid?'var(--green)':filled>0?'var(--amber)':'var(--text2)';
+      h += `<tr><td style="font-weight:600">${p.name}</td><td style="color:${color}">${filled===10&&valid?'Complete':filled===0?'Empty':filled+'/10'}</td><td style="text-align:right;display:flex;gap:6px;justify-content:flex-end"><button class="btn sm" onclick="openEditor('${p.id}')">Edit</button><button class="btn sm danger" onclick="delP('${p.id}')">Remove</button></td></tr>`;
+    });
+    h += '</tbody></table></div>';
+  }
+  h += `<div class="divider"></div><div class="section-title">Payout structure</div>
+  <div class="card">
+    <div class="payout-row"><span style="color:var(--text2)">Entries</span><span>${cache.participants.length} × $20</span></div>
+    <div class="payout-row"><span style="color:var(--text2)">Total collected</span><span style="font-weight:600">$${tot}</span></div>
+    <div class="payout-row"><span style="color:var(--text2)">Admin fee (1.5%)</span><span>$${adm}</span></div>
+    <div class="payout-row"><span style="color:var(--text2)">Prize pool</span><span style="font-weight:600">$${pool}</span></div>
+    <div style="height:6px"></div>
+    ${pays.map((p,i)=>`<div class="payout-row"><span>${p.place}${['st','nd','rd','th','th','th','th','th'][i]} place (${(p.pct*100).toFixed(1)}%)</span><span class="pts-green">$${p.amt}</span></div>`).join('')}
+  </div>`;
+  document.getElementById('admin').innerHTML = h;
+}
+
+async function addP() {
+  if (!dbReady) { alert('Database not connected.'); return; }
+  const el=document.getElementById('new-name'); const n=el.value.trim(); if(!n)return;
+  await dbInsertParticipant({ name:n, roster:{} });
+  el.value=''; await refreshCache(); renderAll();
+}
+async function delP(id) {
+  if (!confirm('Remove this participant?')) return;
+  await dbDeleteParticipant(id); await refreshCache(); renderAll();
+}
+async function clearAllParticipants() {
+  if (!confirm('Remove ALL participants? This cannot be undone.')) return;
+  for (const p of cache.participants) await dbDeleteParticipant(p.id);
+  await refreshCache(); renderAll();
+}
+
+// ============================================================
+// RENDER — SETUP
+// ============================================================
+function renderSetupTab() {
+  const hasConfig = localStorage.getItem('mm_url') && localStorage.getItem('mm_key');
+  let h = `<div class="section-title">Supabase database setup</div>
+  <div class="alert info">This is a one-time setup. Once done, everyone who opens the URL will share the same live data — rosters, results, and leaderboard.</div>
+
+  <div class="card" style="margin-bottom:1rem">
+    <div style="font-weight:600;font-size:14px;margin-bottom:1rem">Step-by-step instructions</div>
+    <div class="step"><div class="step-num">1</div><div class="step-body"><strong>Create a free Supabase account</strong><br>Go to <a href="https://supabase.com" target="_blank" style="color:var(--blue)">supabase.com</a> → click "Start your project" → sign up with GitHub or email. It's free, no credit card needed.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-body"><strong>Create a new project</strong><br>Click "New project" → name it <code>march-matness</code> → pick any region → set a database password (save it somewhere) → click "Create new project". Wait ~1 minute for it to spin up.</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-body"><strong>Create the two database tables</strong><br>In your project, click <strong>SQL Editor</strong> in the left sidebar → click "New query" → paste this entire block and click Run:</div></div>
+    <div class="code-block">create table participants (
+  id uuid default gen_random_uuid() primary key,
+  name text not null,
+  roster jsonb default '{}'::jsonb,
+  created_at timestamptz default now()
+);
+
+create table results (
+  id uuid default gen_random_uuid() primary key,
+  weight int not null,
+  wrestler_name text not null,
+  bracket text not null,
+  round text not null,
+  result_type text not null default 'decision',
+  placement_pts numeric default 0,
+  source text default 'manual',
+  created_at timestamptz default now()
+);
+
+alter table participants enable row level security;
+alter table results enable row level security;
+
+create policy "Public read" on participants for select using (true);
+create policy "Public insert" on participants for insert with check (true);
+create policy "Public update" on participants for update using (true);
+create policy "Public delete" on participants for delete using (true);
+
+create policy "Public read" on results for select using (true);
+create policy "Public insert" on results for insert with check (true);
+create policy "Public delete" on results for delete using (true);</div>
+    <div class="step" style="margin-top:1rem"><div class="step-num">4</div><div class="step-body"><strong>Get your API keys</strong><br>Click <strong>Project Settings</strong> (gear icon) → <strong>API</strong> → copy two things:<br>• <strong>Project URL</strong> — looks like <code>https://abcxyz.supabase.co</code><br>• <strong>anon public</strong> key — a long string starting with <code>eyJ...</code></div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-body"><strong>Paste them below and save</strong></div></div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:600;font-size:14px;margin-bottom:1rem">Enter your Supabase credentials</div>
+    <div class="config-row">
+      <div class="form-group"><label>Project URL</label><input type="text" id="cfg-url" placeholder="https://abcxyz.supabase.co" value="${localStorage.getItem('mm_url')||''}"></div>
+      <div class="form-group"><label>Anon public key</label><input type="text" id="cfg-key" placeholder="eyJ..." value="${localStorage.getItem('mm_key')||''}"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
+      <button class="btn primary" onclick="saveConfig()">Save and connect</button>
+      ${hasConfig?`<button class="btn danger" onclick="clearConfig()">Clear credentials</button>`:''}
+    </div>
+    <div id="cfg-result" style="margin-top:10px"></div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-title">Share the app</div>
+  <div class="card">
+    <div style="font-size:13px;color:var(--text2);margin-bottom:1rem">Once you've completed setup above, host the app for free on GitHub Pages so anyone can open it. The credentials are saved in each user's browser automatically once you share the URL.</div>
+    <div class="step"><div class="step-num">1</div><div class="step-body"><strong>Download this HTML file</strong> — use the download button below.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-body"><strong>Open the file in a text editor</strong> (Notepad on Windows, TextEdit on Mac). Find the line near the top that says <code>supabaseUrl: localStorage.getItem('mm_url') || ''</code> and replace the two empty <code>''</code> values with your actual URL and key so they're pre-filled for everyone:<br><br><code>supabaseUrl: 'https://abcxyz.supabase.co'</code><br><code>supabaseKey: 'eyJ...'</code></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-body"><strong>Go to <a href="https://github.com" target="_blank" style="color:var(--blue)">github.com</a></strong> → create a free account → click "+" → New repository → name it <code>march-matness</code> → set it to Public → click "Create repository".</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-body"><strong>Upload the file</strong> → on your new repo page click "uploading an existing file" → drag in your <code>index.html</code> → click "Commit changes".</div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-body"><strong>Enable GitHub Pages</strong> → click Settings → Pages (left sidebar) → under "Source" select "Deploy from a branch" → branch: main, folder: / (root) → Save. Wait ~1 minute.</div></div>
+    <div class="step"><div class="step-num">6</div><div class="step-body"><strong>Your URL</strong> will be <code>https://YOURUSERNAME.github.io/march-matness</code> — share this with your pool participants!</div></div>
+    <div style="margin-top:1rem">
+      <button class="btn primary" onclick="downloadHTML()">Download index.html</button>
+    </div>
+  </div>`;
+  document.getElementById('setup').innerHTML = h;
+}
+
+async function saveConfig() {
+  const url = document.getElementById('cfg-url').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('cfg-key').value.trim();
+  const el = document.getElementById('cfg-result');
+  if (!url || !key) { el.innerHTML='<div class="alert error">Both fields are required.</div>'; return; }
+  if (!url.startsWith('https://')) { el.innerHTML='<div class="alert error">URL must start with https://</div>'; return; }
+  if (!key.startsWith('eyJ')) { el.innerHTML='<div class="alert warn">Key looks wrong — make sure you copied the "anon public" key (starts with eyJ...), not the service_role key.</div>'; return; }
+  localStorage.setItem('mm_url', url); localStorage.setItem('mm_key', key);
+  sb = null; // force new client on next init
+  el.innerHTML='<div class="alert info">Connecting...</div>';
+  const result = await initSupabase();
+  if (result === true) {
+    el.innerHTML='<div class="alert success">Connected! Your database is ready.</div>';
+    await refreshCache(); renderAll();
+  } else {
+    const errMsg = (result && result.error) ? result.error : 'Connection failed';
+    let hint = '';
+    if (errMsg.includes('relation') || errMsg.includes('does not exist')) {
+      hint = '<br><br><strong>Fix:</strong> The tables don\'t exist yet. Go back to step 3 and run the SQL in Supabase SQL Editor.';
+    } else if (errMsg.includes('Invalid API key') || errMsg.includes('JWT')) {
+      hint = '<br><br><strong>Fix:</strong> Your API key looks wrong. In Supabase go to Project Settings → API → copy the "anon public" key (not service_role).';
+    } else if (errMsg.includes('fetch') || errMsg.includes('network') || errMsg.includes('Failed')) {
+      hint = '<br><br><strong>Fix:</strong> Check your Project URL — it should look like https://abcxyz.supabase.co with no trailing slash.';
+    }
+    el.innerHTML=`<div class="alert error"><strong>Error:</strong> ${errMsg}${hint}</div>`;
+  }
+}
+
+function clearConfig() {
+  localStorage.removeItem('mm_url'); localStorage.removeItem('mm_key');
+  location.reload();
+}
+
+function downloadHTML() {
+  const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'index.html'; a.click();
+}
+
+// ============================================================
+// MODALS
+// ============================================================
+function showDetail(id) {
+  const p = cache.participants.find(x=>x.id===id); if(!p) return;
+  const { total, detail } = calcPPts(p);
+  let h = `<div class="modal-header"><div class="modal-title">${p.name} — ${total} pts</div><button class="close-btn" onclick="closeModal()">×</button></div>
+  <table><thead><tr><th>Wt</th><th>Wrestler</th><th>School</th><th>Seed</th><th style="text-align:right">Pts</th></tr></thead><tbody>`;
+  WEIGHTS.forEach(w => {
+    const d = detail[w];
+    if (!d||!d.name) { h+=`<tr><td>${w}</td><td colspan="4" style="color:var(--text2);font-style:italic">No pick</td></tr>`; return; }
+    h += `<tr><td style="color:var(--text2)">${w}</td><td style="font-weight:500">${d.name}</td><td style="color:var(--text2);font-size:12px">${d.school||''}</td><td><span class="seed-chip ${getSeedClass(d.seed)}">${getSeedLabel(d.seed)}</span></td><td style="text-align:right" class="pts-green">${d.total}</td></tr>`;
+  });
+  h += '</tbody></table>';
+  showModal(h);
+}
+
+async function openEditor(id) {
+  const p = cache.participants.find(x=>x.id===id); if(!p) return;
+  const roster = p.roster||{};
+  let h = `<div class="modal-header"><div class="modal-title">Edit roster — ${p.name}</div><button class="close-btn" onclick="closeModal()">×</button></div>
+  <div id="rv"></div><div class="weight-grid">`;
+  WEIGHTS.forEach(w => {
+    const cur = roster[w];
+    h += `<div class="weight-card"><div class="weight-label">${w} lbs</div>
+    <select id="pick-${w}" onchange="setPick('${id}',${w})">
+      <option value="">— No pick —</option>
+      ${WRESTLERS[w].map(wr=>`<option value="${wr.name}" ${cur&&cur.name===wr.name?'selected':''}>${wr.name} (#${wr.seed}) — ${wr.school}</option>`).join('')}
+    </select></div>`;
+  });
+  h += `</div><div style="margin-top:1rem;text-align:right"><button class="btn primary" onclick="closeModal()">Done</button></div>`;
+  showModal(h); updateValidUI(id);
+}
+
+async function setPick(id, w) {
+  const p = cache.participants.find(x=>x.id===id); if(!p) return;
+  const val = document.getElementById('pick-'+w).value;
+  const roster = { ...(p.roster||{}) };
+  if (!val) delete roster[w]; else roster[w] = WRESTLERS[w].find(x=>x.name===val);
+  await dbUpdateParticipant(id, roster);
+  p.roster = roster;
+  updateValidUI(id); renderLeaderboard(); renderRosterTab();
+}
+
+function updateValidUI(id) {
+  const p = cache.participants.find(x=>x.id===id);
+  const el = document.getElementById('rv'); if(!p||!el) return;
+  const roster = p.roster||{};
+  const { valid, err, counts, filled } = validateRoster(roster);
+  let h = `<div class="seed-counter">
+    <span class="sci ${counts.s12<=2?'ok':'warn'}">#1-2: ${counts.s12}/2</span>
+    <span class="sci ${counts.s34<=2?'ok':'warn'}">#3-4: ${counts.s34}/2</span>
+    <span class="sci ${counts.s56<=2?'ok':'warn'}">#5-6: ${counts.s56}/2</span>
+    <span class="sci ${counts.s78<=2?'ok':'warn'}">#7-8: ${counts.s78}/2</span>
+    <span class="sci ok">#9+: ${counts.s9}</span>
+    <span class="sci ${filled===10?'ok':'warn'}">${filled}/10</span>
+  </div>`;
+  if (!valid) err.forEach(e=>{ h+=`<div class="alert error" style="margin-top:6px">${e}</div>`; });
+  else if (filled===10) h+=`<div class="alert success" style="margin-top:6px">Roster valid!</div>`;
+  el.innerHTML = h;
+}
+
+function showModal(h) { document.getElementById('modal-root').innerHTML=`<div class="modal-backdrop" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">${h}</div></div>`; }
+function closeModal() { document.getElementById('modal-root').innerHTML=''; }
+
+// ============================================================
+// TAB ROUTING
+// ============================================================
+function showTab(tab, btn) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  document.getElementById(tab).classList.add('active');
+  renderTab(tab);
+}
+function renderTab(t) {
+  if(t==='leaderboard') renderLeaderboard();
+  else if(t==='roster') renderRosterTab();
+  else if(t==='results') renderResultsTab();
+  else if(t==='admin') renderAdminTab();
+  else if(t==='setup') renderSetupTab();
+}
+function renderAll() {
+  const a = document.querySelector('.section.active');
+  if (a) renderTab(a.id);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+(async () => {
+  const ok = await initSupabase();
+  if (ok) await refreshCache();
+  renderAll();
+})();
+</script>
+
+
+</body></html>
