@@ -147,6 +147,7 @@
         <button class="tab" onclick="showTab('roster',this)">Rosters</button>
         <button class="tab" onclick="showTab('results',this)">Results</button>
         <button class="tab" onclick="showTab('admin',this)">Admin</button>
+        <button class="tab active" onclick="showTab('setup',this)">Setup</button>
       </div>
     </div>
   </div>
@@ -169,7 +170,8 @@
   <div id="roster" class="section"></div>
   <div id="results" class="section"></div>
   <div id="admin" class="section"></div>
-   <div class="alert info">This is a one-time setup. Once done, everyone who opens the URL will share the same live data — rosters, results, and leaderboard.</div>
+  <div id="setup" class="section active"><div class="section-title">Supabase database setup</div>
+  <div class="alert info">This is a one-time setup. Once done, everyone who opens the URL will share the same live data — rosters, results, and leaderboard.</div>
 
   <div class="card" style="margin-bottom:1rem">
     <div style="font-weight:600;font-size:14px;margin-bottom:1rem">Step-by-step instructions</div>
@@ -770,7 +772,118 @@ async function clearAllParticipants() {
 // ============================================================
 // RENDER — SETUP
 // ============================================================
+function renderSetupTab() {
+  const hasConfig = localStorage.getItem('mm_url') && localStorage.getItem('mm_key');
+  let h = `<div class="section-title">Supabase database setup</div>
+  <div class="alert info">This is a one-time setup. Once done, everyone who opens the URL will share the same live data — rosters, results, and leaderboard.</div>
 
+  <div class="card" style="margin-bottom:1rem">
+    <div style="font-weight:600;font-size:14px;margin-bottom:1rem">Step-by-step instructions</div>
+    <div class="step"><div class="step-num">1</div><div class="step-body"><strong>Create a free Supabase account</strong><br>Go to <a href="https://supabase.com" target="_blank" style="color:var(--blue)">supabase.com</a> → click "Start your project" → sign up with GitHub or email. It's free, no credit card needed.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-body"><strong>Create a new project</strong><br>Click "New project" → name it <code>march-matness</code> → pick any region → set a database password (save it somewhere) → click "Create new project". Wait ~1 minute for it to spin up.</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-body"><strong>Create the two database tables</strong><br>In your project, click <strong>SQL Editor</strong> in the left sidebar → click "New query" → paste this entire block and click Run:</div></div>
+    <div class="code-block">create table participants (
+  id uuid default gen_random_uuid() primary key,
+  name text not null,
+  roster jsonb default '{}'::jsonb,
+  created_at timestamptz default now()
+);
+
+create table results (
+  id uuid default gen_random_uuid() primary key,
+  weight int not null,
+  wrestler_name text not null,
+  bracket text not null,
+  round text not null,
+  result_type text not null default 'decision',
+  placement_pts numeric default 0,
+  source text default 'manual',
+  created_at timestamptz default now()
+);
+
+alter table participants enable row level security;
+alter table results enable row level security;
+
+create policy "Public read" on participants for select using (true);
+create policy "Public insert" on participants for insert with check (true);
+create policy "Public update" on participants for update using (true);
+create policy "Public delete" on participants for delete using (true);
+
+create policy "Public read" on results for select using (true);
+create policy "Public insert" on results for insert with check (true);
+create policy "Public delete" on results for delete using (true);</div>
+    <div class="step" style="margin-top:1rem"><div class="step-num">4</div><div class="step-body"><strong>Get your API keys</strong><br>Click <strong>Project Settings</strong> (gear icon) → <strong>API</strong> → copy two things:<br>• <strong>Project URL</strong> — looks like <code>https://abcxyz.supabase.co</code><br>• <strong>anon public</strong> key — a long string starting with <code>eyJ...</code></div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-body"><strong>Paste them below and save</strong></div></div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:600;font-size:14px;margin-bottom:1rem">Enter your Supabase credentials</div>
+    <div class="config-row">
+      <div class="form-group"><label>Project URL</label><input type="text" id="cfg-url" placeholder="https://abcxyz.supabase.co" value="${localStorage.getItem('mm_url')||''}"></div>
+      <div class="form-group"><label>Anon public key</label><input type="text" id="cfg-key" placeholder="eyJ..." value="${localStorage.getItem('mm_key')||''}"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
+      <button class="btn primary" onclick="saveConfig()">Save and connect</button>
+      ${hasConfig?`<button class="btn danger" onclick="clearConfig()">Clear credentials</button>`:''}
+    </div>
+    <div id="cfg-result" style="margin-top:10px"></div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-title">Share the app</div>
+  <div class="card">
+    <div style="font-size:13px;color:var(--text2);margin-bottom:1rem">Once you've completed setup above, host the app for free on GitHub Pages so anyone can open it. The credentials are saved in each user's browser automatically once you share the URL.</div>
+    <div class="step"><div class="step-num">1</div><div class="step-body"><strong>Download this HTML file</strong> — use the download button below.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-body"><strong>Open the file in a text editor</strong> (Notepad on Windows, TextEdit on Mac). Find the line near the top that says <code>supabaseUrl: localStorage.getItem('mm_url') || ''</code> and replace the two empty <code>''</code> values with your actual URL and key so they're pre-filled for everyone:<br><br><code>supabaseUrl: 'https://abcxyz.supabase.co'</code><br><code>supabaseKey: 'eyJ...'</code></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-body"><strong>Go to <a href="https://github.com" target="_blank" style="color:var(--blue)">github.com</a></strong> → create a free account → click "+" → New repository → name it <code>march-matness</code> → set it to Public → click "Create repository".</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-body"><strong>Upload the file</strong> → on your new repo page click "uploading an existing file" → drag in your <code>index.html</code> → click "Commit changes".</div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-body"><strong>Enable GitHub Pages</strong> → click Settings → Pages (left sidebar) → under "Source" select "Deploy from a branch" → branch: main, folder: / (root) → Save. Wait ~1 minute.</div></div>
+    <div class="step"><div class="step-num">6</div><div class="step-body"><strong>Your URL</strong> will be <code>https://YOURUSERNAME.github.io/march-matness</code> — share this with your pool participants!</div></div>
+    <div style="margin-top:1rem">
+      <button class="btn primary" onclick="downloadHTML()">Download index.html</button>
+    </div>
+  </div>`;
+  document.getElementById('setup').innerHTML = h;
+}
+
+async function saveConfig() {
+  const url = document.getElementById('cfg-url').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('cfg-key').value.trim();
+  const el = document.getElementById('cfg-result');
+  if (!url || !key) { el.innerHTML='<div class="alert error">Both fields are required.</div>'; return; }
+  if (!url.startsWith('https://')) { el.innerHTML='<div class="alert error">URL must start with https://</div>'; return; }
+  if (!key.startsWith('eyJ')) { el.innerHTML='<div class="alert warn">Key looks wrong — make sure you copied the "anon public" key (starts with eyJ...), not the service_role key.</div>'; return; }
+  localStorage.setItem('mm_url', url); localStorage.setItem('mm_key', key);
+  sb = null; // force new client on next init
+  el.innerHTML='<div class="alert info">Connecting...</div>';
+  const result = await initSupabase();
+  if (result === true) {
+    el.innerHTML='<div class="alert success">Connected! Your database is ready.</div>';
+    await refreshCache(); renderAll();
+  } else {
+    const errMsg = (result && result.error) ? result.error : 'Connection failed';
+    let hint = '';
+    if (errMsg.includes('relation') || errMsg.includes('does not exist')) {
+      hint = '<br><br><strong>Fix:</strong> The tables don\'t exist yet. Go back to step 3 and run the SQL in Supabase SQL Editor.';
+    } else if (errMsg.includes('Invalid API key') || errMsg.includes('JWT')) {
+      hint = '<br><br><strong>Fix:</strong> Your API key looks wrong. In Supabase go to Project Settings → API → copy the "anon public" key (not service_role).';
+    } else if (errMsg.includes('fetch') || errMsg.includes('network') || errMsg.includes('Failed')) {
+      hint = '<br><br><strong>Fix:</strong> Check your Project URL — it should look like https://abcxyz.supabase.co with no trailing slash.';
+    }
+    el.innerHTML=`<div class="alert error"><strong>Error:</strong> ${errMsg}${hint}</div>`;
+  }
+}
+
+function clearConfig() {
+  localStorage.removeItem('mm_url'); localStorage.removeItem('mm_key');
+  location.reload();
+}
+
+function downloadHTML() {
+  const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'index.html'; a.click();
+}
 
 // ============================================================
 // MODALS
@@ -852,6 +965,7 @@ function renderTab(t) {
   else if(t==='roster') renderRosterTab();
   else if(t==='results') renderResultsTab();
   else if(t==='admin') renderAdminTab();
+  else if(t==='setup') renderSetupTab();
 }
 function renderAll() {
   const a = document.querySelector('.section.active');
