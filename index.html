@@ -771,44 +771,6 @@ async function clearAllParticipants() {
 // RENDER — SETUP
 // ============================================================
 
-async function saveConfig() {
-  const url = document.getElementById('cfg-url').value.trim().replace(/\/$/, '');
-  const key = document.getElementById('cfg-key').value.trim();
-  const el = document.getElementById('cfg-result');
-  if (!url || !key) { el.innerHTML='<div class="alert error">Both fields are required.</div>'; return; }
-  if (!url.startsWith('https://')) { el.innerHTML='<div class="alert error">URL must start with https://</div>'; return; }
-  if (!key.startsWith('eyJ')) { el.innerHTML='<div class="alert warn">Key looks wrong — make sure you copied the "anon public" key (starts with eyJ...), not the service_role key.</div>'; return; }
-  localStorage.setItem('mm_url', url); localStorage.setItem('mm_key', key);
-  sb = null; // force new client on next init
-  el.innerHTML='<div class="alert info">Connecting...</div>';
-  const result = await initSupabase();
-  if (result === true) {
-    el.innerHTML='<div class="alert success">Connected! Your database is ready.</div>';
-    await refreshCache(); renderAll();
-  } else {
-    const errMsg = (result && result.error) ? result.error : 'Connection failed';
-    let hint = '';
-    if (errMsg.includes('relation') || errMsg.includes('does not exist')) {
-      hint = '<br><br><strong>Fix:</strong> The tables don\'t exist yet. Go back to step 3 and run the SQL in Supabase SQL Editor.';
-    } else if (errMsg.includes('Invalid API key') || errMsg.includes('JWT')) {
-      hint = '<br><br><strong>Fix:</strong> Your API key looks wrong. In Supabase go to Project Settings → API → copy the "anon public" key (not service_role).';
-    } else if (errMsg.includes('fetch') || errMsg.includes('network') || errMsg.includes('Failed')) {
-      hint = '<br><br><strong>Fix:</strong> Check your Project URL — it should look like https://abcxyz.supabase.co with no trailing slash.';
-    }
-    el.innerHTML=`<div class="alert error"><strong>Error:</strong> ${errMsg}${hint}</div>`;
-  }
-}
-
-function clearConfig() {
-  localStorage.removeItem('mm_url'); localStorage.removeItem('mm_key');
-  location.reload();
-}
-
-function downloadHTML() {
-  const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = 'index.html'; a.click();
-}
 
 // ============================================================
 // MODALS
